@@ -549,6 +549,7 @@ def run_live_edit(prim, stageUrl, jsonFileName, watch_dir):
          [u] list session users
          [g] emit a GetUsers message (note there will be no response unless another app is connected to the same session)
          [c] log contents of the session config file
+         [f] let there be sphereflakes
          [m] merge changes and end the session
          [q] quit.
          """
@@ -569,7 +570,12 @@ def run_live_edit(prim, stageUrl, jsonFileName, watch_dir):
 
         if option == b'o':
             session_owner = session_toml_util.get_session_owner(g_live_session_info.get_live_session_toml_url())
-            LOGGER.info(f"Session Owner: {session_owner}")
+            LOGGER.info(f"Session Owner: {session_owner}")           
+
+
+        elif option == b'f':
+            print("its raining sphereflakes")
+            
 
         elif option == b'u':
             list_session_users()
@@ -611,16 +617,14 @@ async def main():
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("-v", "--verbose", action='store_true', default=False)
-    parser.add_argument("-e", "--existing", action="store", required=True, help ="Omniverse scene name (must be hosted in Nucleus")
-    parser.add_argument("-j", "--jsonfile", action="store", required=False, default="", help="Input file with json xforms")
-    parser.add_argument("-w", "--watchdir", action="store", required=False, default="", help="Rundir to watch json xforms")
+    parser.add_argument("-u", "--sceneurl", action="store", required=True, help ="Omniverse scene url (must be hosted in Nucleus")
+    parser.add_argument("-x", "--session", action="store", required=True, help ="Omniverse session name (must be hosted in Nucleus")
 
     args = parser.parse_args()
 
-    stage_url = args.existing
+    stage_url = args.sceneurl
     g_logging_enabled = args.verbose
-    json_file_name = args.jsonfile
-    watch_dir = args.watchdir
+    session_name = args.session
 
     startOmniverse()
 
@@ -633,7 +637,7 @@ async def main():
 
     boxMesh = None
 
-    LOGGER.debug("Stage url: %s", stage_url)
+    LOGGER.debug(f"Stage url: {stage_url} session:{session_name}")
     OpenStage(stage_url)
 
     # Setup a tick update for the async channel messages
@@ -657,7 +661,7 @@ async def main():
         exit(1)
 
       
-    g_loop.run_in_executor(g_thread_pool_executor, run_live_edit, boxMesh, stage_url, json_file_name, watch_dir)        
+    g_loop.run_in_executor(g_thread_pool_executor, run_live_edit, boxMesh, "", "", "")        
 
     while not g_end_program:
         await asyncio.sleep(0.1)
