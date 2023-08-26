@@ -1,0 +1,39 @@
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\bin
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\libnvvp
+C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\wbin
+C:\WINDOWS\system32
+C:\WINDOWS
+C:\WINDOWS\System32\Wbem
+C:\WINDOWS\System32\WindowsPowerShell\v1.0\
+C:\WINDOWS\System32\OpenSSH\
+C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common
+C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR
+C:\Program Files\Microsoft SQL Server\150\Tools\Binn\
+C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\
+C:\Program Files\Microsoft SQL Server\130\Tools\Binn\
+C:\Program Files\Docker\Docker\resources\bin
+C:\Program Files\nodejs\
+C:\Program Files\PuTTY\
+C:\Program Files\dotnet\
+C:\Program Files\NVIDIA Corporation\Nsight Compute 2023.1.1\
+C:\Program Files\Git\cmd
+C:\Program Files\Git\mingw64\bin
+C:\Program Files\Git\usr\bin
+D:\ut
+D:\bin
+C:\python39
+C:\python39\Scripts
+C:\Users\mike\AppData\Local\Microsoft\WindowsApps
+C:\Users\mike\AppData\Local\Programs\Microsoft VS Code\bin
+D:\bin\ffmpeg\bin
+C:\Users\mike\AppData\Roaming\npm
+C:\Users\mike\.dotnet\tools
+
+D:\nv\ov\pkg\connectsample-201.0.0\_build\windows-x86_64\release
+d:\nv\ov\pkg\code-2022.3.3\extscache\omni.warp-0.7.2\warp\bin
+d:\nv\ov\pkg\code-2022.3.3\kit\python
+d:\nv\ov\pkg\code-2022.3.3\kit\libs\mdl
+d:\nv\ov\pkg\code-2022.3.3\kit\extscore\omni.kit.pip_archive\pip_prebundle\numpy\.libs
+d:\nv\ov\pkg\code-2022.3.3\extscache\omni.isaac.core_archive-2.0.1+104.1.wx64\pip_prebundle\scipy\.libs
+D:\nv\ov\pkg\code-2022.3.3\kit\extscore\omni.usd.libs\bin
+D:\nv\ov\pkg\code-2022.3.3\kit\extscore\omni.usd\bin
