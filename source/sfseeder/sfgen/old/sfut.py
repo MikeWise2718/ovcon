@@ -91,21 +91,16 @@ def read_in_syspath(fname: str = 'd:/nv/ov/syspath.txt') -> None:
 
 class MatMan():
     matlib = {}
-    _stage = None
 
-    def __init__(self, stage) -> None:
+    def __init__(self) -> None:
         self.CreateMaterials()
-        self._stage = stage
-
-    def ResetStage(self, stage):
-        self._stage = stage
+        pass
 
     def MakePreviewSurfaceTexMateral(self, matname: str, fname: str):
         # This is all materials
         matpath = "/World/Looks"
         mlname = f'{matpath}/boardMat_{fname.replace(".","_")}'
-        # stage = omni.usd.get_context().get_stage()
-        stage = self._stage
+        stage = omni.usd.get_context().get_stage()
         material = UsdShade.Material.Define(stage, mlname)
         pbrShader = UsdShade.Shader.Define(stage, f'{mlname}/PBRShader')
         pbrShader.CreateIdAttr("UsdPreviewSurface")
@@ -146,9 +141,7 @@ class MatMan():
 
     def MakePreviewSurfaceMaterial(self, matname: str, rgb: str):
         mtl_path = Sdf.Path(f"/World/Looks/Presurf_{matname}")
-
-        # stage = omni.usd.get_context().get_stage()
-        stage = self._stage
+        stage = omni.usd.get_context().get_stage()
 
         mtl = UsdShade.Material.Define(stage, mtl_path)
         shader = UsdShade.Shader.Define(stage, mtl_path.AppendPath("Shader"))
@@ -168,14 +161,14 @@ class MatMan():
 
     def CopyRemoteMaterial(self, matname, urlbranch, force=False):
         print(f"CopyRemoteMaterial matname:{matname} urlbranch:{urlbranch} force:{force}")
-        # stage = omni.usd.get_context().get_stage()
-        stage = self._stage
+        stage = omni.usd.get_context().get_stage()
         baseurl = 'https://omniverse-content-production.s3.us-west-2.amazonaws.com'
         url = f'{baseurl}/Materials/{urlbranch}.mdl'
         mpath = f'/World/Looks/{matname}'
         action = ""
         # Note we should not execute the next command if the material already exists
         if force or not stage.GetPrimAtPath(mpath):
+            import omni.kit.commands as okc
             okc.execute('CreateMdlMaterialPrimCommand', mtl_url=url, mtl_name=matname, mtl_path=mpath)
             action = "fetch"
             self.fetchCount += 1

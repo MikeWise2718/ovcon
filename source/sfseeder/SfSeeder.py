@@ -61,6 +61,10 @@ import keyboard
 from os import listdir
 from os.path import isfile, join
 
+from sfgen.sfut import MatMan
+from sfgen.spheremesh import SphereMeshFactory
+from sfgen.sphereflake import SphereFlakeFactory
+
 
 # USD imports
 from pxr import Gf, Sdf, Usd, UsdGeom, UsdUtils, Ar
@@ -86,6 +90,7 @@ g_send_merge_start_message = False
 g_send_merge_done_message = False
 g_send_get_users_message = False
 g_live_session_info = None
+g_session_name = ""
 
 LOGGER = log.get_logger("PyLiveSession", level=logging.INFO)
 
@@ -294,23 +299,56 @@ async def find_or_create_session(stageUrl):
 
     # list the available sessions, allow the user to pick one
     result, list_entries = await omni.client.list_async(session_folder_path_for_stage)
-    print("Select a live session to join: ")
+    session_preselected = False
     session_idx = 0
     for entry in list_entries:
         session_name = os.path.splitext(entry.relative_path)[0]
-        print(f" [{session_idx}] {session_name}")
-        print(entry)
+        print(f"sn:{session_name} g_session_name:{g_session_name}")
+        if session_name==g_session_name:
+            session_preselected = True
+            print("matched")
+            break
         session_idx += 1
-    print(f" [n] Create a new session")
-    print(f" [q] Quit")
+        
+    print(f"session_preselected:{session_preselected} g_session_name:{g_session_name}")
 
-    session_idx_selected = input("Select a live session to join: ")
+    if not session_preselected:
+        print("Select a live session to join: ")
+        session_idx = 0
+        for entry in list_entries:
+            session_name = os.path.splitext(entry.relative_path)[0]
+            print(f" [{session_idx}] {session_name}")
+            print(entry)
+            session_idx += 1
+        print(f" [n] Create a new session")
+        print(f" [q] Quit")
+
+        session_idx_selected = input("Select a live session to join: ")
+        
     live_stage = None
     live_layer = None
     session_name = None
 
     # the user picked a session, find the root.live file
-    if session_idx_selected.isnumeric() and int(session_idx_selected) < session_idx:
+    if session_preselected:
+        g_live_session_info.set_session_name(g_session_name)
+        session_name = g_session_name
+        
+        # Check the session config file to verify the version matches the current supported version
+        toml_url_str = g_live_session_info.get_live_session_toml_url()
+        if not session_toml_util.is_version_compatible(toml_url_str):
+            actual_version = session_toml_util.get_session_version(toml_url_str)
+            print(f"The session config TOML file version is not compatible, exiting.")
+            print(f"Expected: {session_toml_util.SUPPORTED_VERSION} Actual: {actual_version}")
+            session_toml_util.log_session_toml(toml_url_str)
+            g_end_program = True
+            return False
+
+        live_session_url = g_live_session_info.get_live_session_url()
+        print(f"Opening live_session_url:{live_session_url}")
+        live_stage = Usd.Stage.Open(live_session_url)       
+      
+    elif session_idx_selected.isnumeric() and int(session_idx_selected) < session_idx:
         session_name = os.path.splitext(list_entries[int(session_idx_selected)].relative_path)[0] 
         g_live_session_info.set_session_name(session_name)
 
@@ -533,7 +571,27 @@ def file_watcher(watchDirectory: str, pollTime: float):
             process_json_lines(lines)
             delete_file(fulljfname)
     
-    
+def let_it_rain():
+    print("its raining sphereflakes")
+    stage = g_stage
+    print(stage)
+    matname = "Red_Glass"
+    sx,sy,sz = (0,0,0)
+    nx,ny,nz = (2,2,2)
+    nnx,nny,nnz = (2,2,2)
+    # stage = context.open_stage(stagestr)
+    matman = MatMan(stage)
+    smf = SphereMeshFactory(stage, matman)
+    sff = SphereFlakeFactory(stage, matman, smf)
+    sff.ResetStage(stage)
+    sff.p_sf_matname = matname
+    sff.p_nsfx = nnx
+    sff.p_nsfy = nny
+    sff.p_nsfz = nnz
+    print(f" sx:{sx} sy:{sy} sz:{sz} nx:{nx} ny:{ny} nz:{nz} nnx:{nnx} nny:{nny} nnz:{nnz}")
+    sff.GenerateManySubcube(sx, sy, sz, nx, ny, nz)
+    print("Done raining")
+      
     
 
 def run_live_edit(prim, stageUrl, jsonFileName, watch_dir):
@@ -574,7 +632,8 @@ def run_live_edit(prim, stageUrl, jsonFileName, watch_dir):
 
 
         elif option == b'f':
-            print("its raining sphereflakes")
+            let_it_rain()
+            omni.client.live_process()
             
 
         elif option == b'u':
@@ -606,6 +665,7 @@ def run_live_edit(prim, stageUrl, jsonFileName, watch_dir):
 
 async def main():
     global g_logging_enabled, g_end_program, g_channel_manager, g_send_merge_start_message, g_send_merge_done_message, g_send_get_users_message
+    global g_session_name
 
     # Set the hang detection time on synchronous client methods to 10 seconds
     # There's a movement to remove _any_ sync client methods, but we're using
@@ -618,13 +678,14 @@ async def main():
 
     parser.add_argument("-v", "--verbose", action='store_true', default=False)
     parser.add_argument("-u", "--sceneurl", action="store", required=True, help ="Omniverse scene url (must be hosted in Nucleus")
-    parser.add_argument("-x", "--session", action="store", required=True, help ="Omniverse session name (must be hosted in Nucleus")
+    parser.add_argument("-n", "--session", action="store", required=False, help ="Omniverse session name (must be hosted in Nucleus")
+    parser.add_argument("-d", "--specdict", action="store", required=False, help ="Materials, Number and positions data (sx,nx,nnx etc)")
 
     args = parser.parse_args()
 
     stage_url = args.sceneurl
     g_logging_enabled = args.verbose
-    session_name = args.session
+    g_session_name = args.session
 
     startOmniverse()
 
@@ -637,7 +698,7 @@ async def main():
 
     boxMesh = None
 
-    LOGGER.debug(f"Stage url: {stage_url} session:{session_name}")
+    LOGGER.debug(f"Stage url: {stage_url} session:{g_session_name}")
     OpenStage(stage_url)
 
     # Setup a tick update for the async channel messages

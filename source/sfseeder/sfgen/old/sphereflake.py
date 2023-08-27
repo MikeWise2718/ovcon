@@ -345,30 +345,26 @@ class SphereFlakeFactory():
                     count += 1
                     # primpath = f"/World/SphereFlake_{count}"
                     primpath = f"/World/SphereFlake_{ix}_{iy}_{iz}__{nx}_{ny}_{nz}"
+                    print(f"primpath:{primpath}")
 
                     cpt = self.GetCenterPosition(ix, iy, iz, extentvec)
-
+                    print(f"cpt:{cpt}")
                     self.Generate(primpath, cpt)
+                    print(f"Generated it")       
                     self._createlist.append(primpath)
                     bnd_cubepath = primpath+"/bounds"
-                    bnd_cube = self.SpawnBBcube(bnd_cubepath, cpt, extentvec, self.p_bb_matname)
-                    self._bbcubelist.append(bnd_cubepath)
-                    if self.p_make_bounds_visible:
-                        UsdGeom.Imageable(bnd_cube).MakeVisible()
-                    else:
-                        UsdGeom.Imageable(bnd_cube).MakeInvisible()
+                    # bnd_cube = self.SpawnBBcube(bnd_cubepath, cpt, extentvec, self.p_bb_matname)
+                    # self._bbcubelist.append(bnd_cubepath)
+                    # if self.p_make_bounds_visible:
+                    #     UsdGeom.Imageable(bnd_cube).MakeVisible()
+                    # else:
+                    #     UsdGeom.Imageable(bnd_cube).MakeInvisible()
         return count
 
-    def ToggleBoundsVisiblity(self, soll: bool):
+    def ToggleBoundsVisiblity(self):
         # print(f"ToggleBoundsVisiblity: {self._bbcubelist}")
-        # okc.execute('ToggleVisibilitySelectedPrims', selected_paths=self._bbcubelist)
-        for path in self._bbcubelist:
-            prim = self._stage.GetPrimAtPath(path)
-            if prim is not None:
-                if soll:
-                    UsdGeom.Imageable(prim).MakeVisible()
-                else:
-                    UsdGeom.Imageable(prim).MakeInvisible()
+        import omni.kit.commands as okc
+        okc.execute('ToggleVisibilitySelectedPrims', selected_paths=self._bbcubelist)
 
     def Generate(self, sphflkname: str, cenpt: Gf.Vec3f):
 
@@ -392,7 +388,7 @@ class SphereFlakeFactory():
         self.GenRecursively(sphflkname, matname, mxdepth, self.p_depth, basept, cenpt, self.p_rad)
 
         elap = time.time() - self._start_time
-        # print(f"GenerateSF {sphflkname} {matname} {depth} {cenpt} totquads:{self._total_quads} in {elap:.3f} secs")
+        print(f"GenerateSF {sphflkname} {matname} {mxdepth} {cenpt} totquads:{self._total_quads} in {elap:.3f} secs")
 
         latest_sf_gen_time = elap
 
@@ -406,6 +402,8 @@ class SphereFlakeFactory():
         meshname = sphflkname + "/SphereMesh"
 
         # spheremesh = UsdGeom.Mesh.Define(self._stage, meshname)
+        
+        print(f"GenRecursively - depth: {depth} genmode:{self.p_genmode} form:{self.p_genform}")
 
         if self.p_genmode == "AsyncMesh":
             meshname = sphflkname + "/SphereMeshAsync"
@@ -437,8 +435,8 @@ class SphereFlakeFactory():
             UsdGeom.XformCommonAPI(xformPrim).SetTranslate((cenpt[0], cenpt[1], cenpt[2]))
             UsdGeom.XformCommonAPI(xformPrim).SetScale((sz, sz, sz))
             spheremesh = UsdGeom.Sphere.Define(stage, meshname)
-            mtl = self._matman.GetMaterial(matname)
-            UsdShade.MaterialBindingAPI(spheremesh).Bind(mtl)
+            # mtl = self._matman.GetMaterial(matname)
+            # UsdShade.MaterialBindingAPI(spheremesh).Bind(mtl)
 
         if depth > 0:
             form = self.p_genform

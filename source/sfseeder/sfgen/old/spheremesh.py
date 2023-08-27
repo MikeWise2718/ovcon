@@ -24,7 +24,6 @@ class SphereMeshFactory():
 
     def ResetStage(self, stage: Usd.Stage):
         self._stage = stage
-        self._matman.ResetStage(stage)
 
     def GenPrep(self):
         self._nquads = self.p_nlat*self.p_nlng
