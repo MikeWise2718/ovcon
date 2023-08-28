@@ -91,6 +91,7 @@ g_send_merge_done_message = False
 g_send_get_users_message = False
 g_live_session_info = None
 g_session_name = ""
+g_pdict = {}
 
 LOGGER = log.get_logger("PyLiveSession", level=logging.INFO)
 
@@ -513,72 +514,28 @@ def end_and_merge_session():
     g_stage_merged = True
     
     
-def delete_file(filename: str):
-    if os.path.exists(filename):
-        os.remove(filename)
-        # print(f"deleted {filename}")
-    else:
-        print(f"file {filename} does not exist so can not delete")
-        
-def delete_files(dirname: str, filenamelist):
-    for fname in filenamelist:
-        fullfname = dirname+fname
-        delete_file(fullfname)
-    
-#function to return files in a directory
-def file_in_directory(dirname: str):
-    onlyfiles = [f for f in listdir(dirname) if isfile(join(dirname, f))]
-    return(onlyfiles)
-
-#function comparing two lists
-
-def list_comparison(OriginalList: list, NewList: list):
-    differencesList = [x for x in NewList if x not in OriginalList] #Note if files get deleted, this will not highlight them
-    return(differencesList)
-
-
-def file_watcher(watchDirectory: str, pollTime: float):
-    while True:
-        if 'watching' not in locals(): #Check if this is the first time the function has run
-            previousFileList = file_in_directory(watchDirectory)
-            watching = 1
-            nfound = len(previousFileList)
-            print(f'First Watch found {nfound}')
-            npass = 1
-            while nfound>0 and npass<5:
-               delete_files(watchDirectory,previousFileList)
-               previousFileList = file_in_directory(watchDirectory)
-               nfound = len(previousFileList)
-               print(f'First Watch now found {nfound}')
-               npass += 1
-        
-        time.sleep(pollTime)
-        
-        newFileList = file_in_directory(watchDirectory)
-        
-        fileDiff = list_comparison(previousFileList, newFileList)
-        
-        previousFileList = newFileList
-        if keyboard.is_pressed('q'):  # if key 'q' is pressed 
-            print('q pressed - Quitting')
-            break        
-        if len(fileDiff) == 0: continue
-        for jfname in fileDiff:
-            fulljfname = f"{watchDirectory}{jfname}"
-            # print(f"Opening {fulljfname}")
-            with open(fulljfname) as f:
-                lines = f.read().splitlines()                 
-            process_json_lines(lines)
-            delete_file(fulljfname)
     
 def let_it_rain():
     print("its raining sphereflakes")
     stage = g_stage
     print(stage)
-    matname = "Red_Glass"
-    sx,sy,sz = (0,0,0)
-    nx,ny,nz = (2,2,2)
-    nnx,nny,nnz = (2,2,2)
+    
+#    matname = "Red_Glass"
+#    sx,sy,sz = (0,0,0)
+#    nx,ny,nz = (2,2,2)
+#    nnx,nny,nnz = (2,2,2)
+
+    matname = g_pdict["matname"]
+    sx = int(g_pdict["sx"])
+    nx = int(g_pdict["nx"])
+    nnx = int(g_pdict["nnx"])
+    sy = int(g_pdict["sy"])
+    ny = int(g_pdict["ny"])
+    nny = int(g_pdict["nny"])
+    sz = int(g_pdict["sz"])
+    nz = int(g_pdict["nz"])
+    nnz = int(g_pdict["nnz"])
+    
     # stage = context.open_stage(stagestr)
     matman = MatMan(stage)
     smf = SphereMeshFactory(stage, matman)
@@ -591,10 +548,17 @@ def let_it_rain():
     print(f" sx:{sx} sy:{sy} sz:{sz} nx:{nx} ny:{ny} nz:{nz} nnx:{nnx} nny:{nny} nnz:{nnz}")
     sff.GenerateManySubcube(sx, sy, sz, nx, ny, nz)
     print("Done raining")
-      
-    
 
-def run_live_edit(prim, stageUrl, jsonFileName, watch_dir):
+
+def run_and_quit():
+    global g_stage, g_end_program, g_stage_merged, g_send_get_users_message
+
+    let_it_rain()
+    omni.client.live_process()
+    g_end_program = True
+
+
+def run_live_loop():
     global g_stage, g_end_program, g_stage_merged, g_send_get_users_message
     angle = 0
     # prim_path = prim.GetPath()
@@ -654,7 +618,7 @@ def run_live_edit(prim, stageUrl, jsonFileName, watch_dir):
         elif option == b'm':
             LOGGER.info("Ending session and Merging live changes to root layer: ")
             end_and_merge_session()
-    
+
         elif option == b'q' or option == chr(27).encode():
             LOGGER.info("Live edit complete")
             g_end_program = True
@@ -663,13 +627,28 @@ def run_live_edit(prim, stageUrl, jsonFileName, watch_dir):
             LOGGER.info(prompt_msg)
 
 
+def parse_params(pstr: str):
+    parr = pstr.split(",")
+    pdict = {}
+    i = 1
+    for ps in parr:
+        ar = ps.split("=")
+        if len(ar)!=2:
+            msg = "Bad parameter string in position {i}{{pstr} "
+            LOGGER.error(msg)
+        pdict[ar[0]] = ar[1]
+        print(f"parse_parmas {i} =>  {ar[0]} assigned {ar[1]}")
+        i += 1
+    return pdict
+
+
 async def main():
     global g_logging_enabled, g_end_program, g_channel_manager, g_send_merge_start_message, g_send_merge_done_message, g_send_get_users_message
-    global g_session_name
+    global g_session_name, g_pdict
 
     # Set the hang detection time on synchronous client methods to 10 seconds
     # There's a movement to remove _any_ sync client methods, but we're using
-    # them in the run_live_edit function because blocking keyboard methods don't 
+    # them in the run_live_loop function because blocking keyboard methods don't 
     # work well in async functions
     omni.client.set_hang_detection_time_ms(10000)
 
@@ -679,13 +658,14 @@ async def main():
     parser.add_argument("-v", "--verbose", action='store_true', default=False)
     parser.add_argument("-u", "--sceneurl", action="store", required=True, help ="Omniverse scene url (must be hosted in Nucleus")
     parser.add_argument("-n", "--session", action="store", required=False, help ="Omniverse session name (must be hosted in Nucleus")
-    parser.add_argument("-d", "--specdict", action="store", required=False, help ="Materials, Number and positions data (sx,nx,nnx etc)")
+    parser.add_argument("-p", "--params", action="store", required=False, help ="Materials, Number and positions data (sx,nx,nnx etc)")
 
     args = parser.parse_args()
 
     stage_url = args.sceneurl
     g_logging_enabled = args.verbose
     g_session_name = args.session
+    g_pdict = parse_params(args.params)
 
     startOmniverse()
 
@@ -695,8 +675,6 @@ async def main():
         LOGGER.error(msg, stage_url)
         shutdownOmniverse()
         exit(-1)
-
-    boxMesh = None
 
     LOGGER.debug(f"Stage url: {stage_url} session:{g_session_name}")
     OpenStage(stage_url)
@@ -722,7 +700,8 @@ async def main():
         exit(1)
 
       
-    g_loop.run_in_executor(g_thread_pool_executor, run_live_edit, boxMesh, "", "", "")        
+    run_and_quit()
+    # g_loop.run_in_executor(g_thread_pool_executor, run_live_loop)        
 
     while not g_end_program:
         await asyncio.sleep(0.1)
