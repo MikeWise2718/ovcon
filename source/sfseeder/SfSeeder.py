@@ -512,29 +512,50 @@ def end_and_merge_session():
         time.sleep(0.1)
 
     g_stage_merged = True
-    
-    
-    
+
+
+def getint(key: str, default: int):
+    rv = default
+    if key in g_pdict:
+        rv = int(g_pdict[key])
+    return rv
+
+
+def getfloat(key: str, default: float):
+    rv = default
+    if key in g_pdict:
+        rv = float(g_pdict[key])
+    return rv
+
+
+def getstr(key: str, default: str):
+    rv = default
+    if key in g_pdict:
+        rv = str(g_pdict[key])
+    return rv
+
+
 def let_it_rain():
     print("its raining sphereflakes")
     stage = g_stage
     print(stage)
-    
+
 #    matname = "Red_Glass"
 #    sx,sy,sz = (0,0,0)
 #    nx,ny,nz = (2,2,2)
 #    nnx,nny,nnz = (2,2,2)
 
-    matname = g_pdict["matname"]
-    sx = int(g_pdict["sx"])
-    nx = int(g_pdict["nx"])
-    nnx = int(g_pdict["nnx"])
-    sy = int(g_pdict["sy"])
-    ny = int(g_pdict["ny"])
-    nny = int(g_pdict["nny"])
-    sz = int(g_pdict["sz"])
-    nz = int(g_pdict["nz"])
-    nnz = int(g_pdict["nnz"])
+    matname = getstr("matname", "Red_Glass")
+    bbmatname = getstr("bbmatname", "Blue_Glass")
+    sx = getint("sx", 0)
+    nx = getint("nx", 2)
+    nnx = getint("nnx", 2)
+    sy = getint("sy", 0)
+    ny = getint("ny", 2)
+    nny = getint("nny", 2)
+    sz = getint("sz", 0)
+    nz = getint("nz", 2)
+    nnz = getint("nnz", 2)
     
     # stage = context.open_stage(stagestr)
     matman = MatMan(stage)
@@ -542,9 +563,15 @@ def let_it_rain():
     sff = SphereFlakeFactory(stage, matman, smf)
     sff.ResetStage(stage)
     sff.p_sf_matname = matname
+    sff.p_bb_matname = bbmatname
     sff.p_nsfx = nnx
     sff.p_nsfy = nny
     sff.p_nsfz = nnz
+    sff.p_radratio = getfloat("radratio", 0.55)
+    sff.p_rad = getint("rad", 50)
+    sff.p_depth = getint("depth", 1)
+    sff.p_genform = getstr("form", "Classic")
+    sff.p_genmode = getstr("mode", "UsdSphere")
     print(f" sx:{sx} sy:{sy} sz:{sz} nx:{nx} ny:{ny} nz:{nz} nnx:{nnx} nny:{nny} nnz:{nnz}")
     sff.GenerateManySubcube(sx, sy, sz, nx, ny, nz)
     print("Done raining")
@@ -558,73 +585,6 @@ def run_and_quit():
     g_end_program = True
 
 
-def run_live_loop():
-    global g_stage, g_end_program, g_stage_merged, g_send_get_users_message
-    angle = 0
-    # prim_path = prim.GetPath()
-    prim_path = ""
-    prompt_msg = inspect.cleandoc(
-        """
-
-        Enter an option:
-         [o] list session owner/admin
-         [u] list session users
-         [g] emit a GetUsers message (note there will be no response unless another app is connected to the same session)
-         [c] log contents of the session config file
-         [f] let there be sphereflakes
-         [m] merge changes and end the session
-         [q] quit.
-         """
-    )
-    LOGGER.info(f"Begin Live Edit on {prim_path}")
-    LOGGER.info(f"{prompt_msg}")
-
-    while True:
-        option = get_char_util.getChar()
-
-        if g_stage_merged:
-            LOGGER.info(f"Exiting since a merge has completed")
-            option = b'q'
-
-        omni.client.live_process()
-
-        ## \todo: Add renaming for parity with C++ sample
-
-        if option == b'o':
-            session_owner = session_toml_util.get_session_owner(g_live_session_info.get_live_session_toml_url())
-            LOGGER.info(f"Session Owner: {session_owner}")           
-
-
-        elif option == b'f':
-            let_it_rain()
-            omni.client.live_process()
-            
-
-        elif option == b'u':
-            list_session_users()
-
-        elif option == b'g':
-            LOGGER.info("Blasting GET_USERS message to channel")
-            # send a get_users message
-            g_send_get_users_message = True
-            while g_send_get_users_message:
-                time.sleep(0.1)
-
-        elif option == b'c':
-            LOGGER.info("Retrieving session config file: ")
-            live_session_toml_url = g_live_session_info.get_live_session_toml_url()
-            session_toml_util.log_session_toml(live_session_toml_url)
-
-        elif option == b'm':
-            LOGGER.info("Ending session and Merging live changes to root layer: ")
-            end_and_merge_session()
-
-        elif option == b'q' or option == chr(27).encode():
-            LOGGER.info("Live edit complete")
-            g_end_program = True
-            break
-        else:
-            LOGGER.info(prompt_msg)
 
 
 def parse_params(pstr: str):
@@ -671,7 +631,7 @@ async def main():
 
     if stage_url and not isValidOmniUrl(stage_url):
         msg = ("This is not an Omniverse Nucleus URL: %s \n"
-                "Correct Omniverse URL format is: omniverse://server_name/Path/To/Example/Folder/helloWorld_py.usd")
+               "Correct Omniverse URL format is: omniverse://server_name/Path/To/Example/Folder/helloWorld_py.usd")
         LOGGER.error(msg, stage_url)
         shutdownOmniverse()
         exit(-1)
@@ -726,8 +686,6 @@ async def main():
     await app_update.stop()
     
     shutdownOmniverse()
-
-
 
 
 if __name__ == "__main__":
